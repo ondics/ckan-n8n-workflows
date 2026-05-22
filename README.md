@@ -52,7 +52,7 @@ Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularie
 
 Getestet mit CKAN 2.11
 
-Download: [xxx](n8n-admin-workflows)
+Download/n8n-Url: [n8n-admin-workflows/dcatapde-groups.json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/dcatapde-groups.json)
 
 ---
 
