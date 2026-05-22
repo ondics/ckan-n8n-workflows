@@ -33,19 +33,19 @@ Prozesse einfacher umzusetzen.
 
 # Workflows
 
-## dataset-create
+## DCAT-AP.de Kategorien einrichten
 
-Automatische Erstellung von CKAN-Datensätzen.
+Die Standard-DCAT-AP.de Kategorien werden in CKAN angelegt. Und bei Bedarf auch gelöscht.
+Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/data-theme)
 
-* Erstellung neuer Datensätze
-* Mapping von Metadaten
-* Validierung von Pflichtfeldern
-* Fehlerbehandlung
+* Hinzufügen der 13 DCAT-AP.de Kategorien/Gruppen (DCAT-AP Sprechweise: data themes)
+* Die Gruppenbeschreibungen sind auf deutsch
+* Die Namen der Kategorien entsprechen dem DCAT-AP.de Standard (Beispiel: `agri`)
+* Icons werden nicht konfiguriert
 
-Getestet mit:
+Getestet mit CKAN 2.11
 
-* CKAN 2.10.x
-* Sprache: DE/EN
+Download: [xxx](n8n-admin-workflows)
 
 ---
 
