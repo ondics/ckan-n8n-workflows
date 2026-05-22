@@ -8,18 +8,25 @@ Prozesse einfacher umzusetzen.
 
 ---
 
+Inhalt
+
+* [Installation](#installation)
+* [Administrative Workflows](#administrative-workflows)
+* [Autoren-bezogene Workflows](#autoren-bezogene-workflows)
+* [Hinweise](#hinweise)
+
+---
+
 # Installation
 
-## Voraussetzungen
+Voraussetzungen
 
 * laufende n8n-Instanz
 * Zugriff auf eine CKAN-Instanz
 * CKAN Site URL
 * CKAN API Token (wenn Änderungen in CKAn durchgeführt werden sollen)
 
----
-
-## Workflow importieren
+Workflow importieren
 
 1. Workflow-Datei oder RAW-GitHub-URL kopieren
 2. In n8n:
@@ -31,7 +38,7 @@ Prozesse einfacher umzusetzen.
 
 ---
 
-# Workflows
+# Administrative Workflows
 
 ## DCAT-AP.de Kategorien einrichten
 
@@ -50,6 +57,12 @@ Download: [xxx](n8n-admin-workflows)
 ---
 
 
+# Autoren-bezogene Workflows
+
+## schaumermal, was da noch kommt...
+
+noch nix.
+
 # Hinweise
 
 * Die Workflows dienen als Referenzimplementierungen.
@@ -61,6 +74,8 @@ Download: [xxx](n8n-admin-workflows)
 ---
 
 # Credits
+
+Danke an die, die solche Arbeiten erst ermöglichen: 
 
 * [CKAN](https://github.com/ckan/ckan)
 * [n8n](https://n8n.io)
