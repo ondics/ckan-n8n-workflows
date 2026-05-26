@@ -46,16 +46,13 @@ Die Standard-DCAT-AP.de Kategorien werden in CKAN angelegt. Und bei Bedarf auch 
 Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/data-theme)
 
 * Hinzufügen der 13 DCAT-AP.de Kategorien/Gruppen (DCAT-AP Sprechweise: data themes)
+* Vorhandene Kategorien werden erkannt und übersprungen
 * Die Gruppenbeschreibungen sind auf deutsch
 * Die Namen der Kategorien entsprechen dem DCAT-AP.de Standard (Beispiel: `agri`)
 * Icons werden nicht konfiguriert
 
-Getestet mit CKAN 2.11
-
-Download/n8n-Url: [n8n-admin-workflows/dcatapde-groups.json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/dcatapde-groups.json)
-
----
-
+Getestet mit CKAN 2.11 und self-hosted n8n
+Download/n8n-Url: [n8n-admin-workflows/DCAT-AP.de Kategorien anlegen (3).json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/DCAT-AP.de Kategorien anlegen (3).json)
 
 # Autoren-bezogene Workflows
 

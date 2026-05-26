@@ -1,0 +1,459 @@
+{
+  "name": "DCAT-AP.de Kategorien anlegen",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.ckanBaseUrl + '/api/3/action/group_show' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id\": \"{{$json.name}}\",\n  \"include_datasets\": false,\n  \"include_extras\": true\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        272
+      ],
+      "id": "1d33a95f-ecbd-46d0-bb52-d1b5659ad344",
+      "name": "group_show",
+      "notesInFlow": true,
+      "onError": "continueErrorOutput",
+      "notes": "Prüft für jede vorbereitete Kategorie, ob sie bereits als CKAN Group existiert.\n\nDer Node ruft die CKAN Action API „group_show“ auf.\n\nErgebnis:\n- Success: Die Kategorie existiert bereits.\n- Error / 404 Not Found: Die Kategorie existiert noch nicht und soll im nächsten Schritt angelegt werden.\n\nEin 404-Fehler ist hier kein technischer Fehler, sondern Teil der gewünschten Logik."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "49fafb64-5fa7-4f1b-8bbc-aa12da29f480",
+              "name": "name",
+              "value": "=={{ $('Code in JavaScript').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "c7f95add-afd3-4ec4-9c28-3a574193a75b",
+              "name": "status",
+              "value": "bereits vorhanden",
+              "type": "string"
+            },
+            {
+              "id": "ed450af1-e4fe-4e6e-b21b-a6ce4dd7828b",
+              "name": "theme_id",
+              "value": "=={{ $('Code in JavaScript').item.json.theme_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        208
+      ],
+      "id": "0e333aa8-a9a0-417d-b7dc-4833944dae97",
+      "name": "Status: bereits vorhanden",
+      "notes": "Diese Kategorie existiert bereits in CKAN.\n\nEs wird nichts neu angelegt. Der Workflow gibt nur eine Statusmeldung aus, damit nachvollziehbar bleibt, dass die Kategorie geprüft und bewusst übersprungen wurde.\n\nDadurch kann der Workflow mehrfach ausgeführt werden, ohne doppelte Kategorien zu erzeugen."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env[\"CKAN_BASE_URL\"].replace(/\\/$/, \"\") + \"/api/3/action/group_create\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env[\"CKAN_API_TOKEN\"].trim() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{$json.name}}\",\n  \"title\": \"{{$json.title}}\",\n  \"description\": \"{{$json.description}}\",\n  \"extras\": [\n    {\n      \"key\": \"dcat_ap_de_theme_id\",\n      \"value\": \"{{$json.theme_id}}\"\n    }\n  ]\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        400
+      ],
+      "id": "3ddd2465-af6f-4057-bc60-41aa5833d39e",
+      "name": "group_create",
+      "notesInFlow": true,
+      "onError": "continueErrorOutput",
+      "notes": "Legt eine fehlende DCAT-AP.de Kategorie als CKAN Group an.\n\nDieser Node wird nur ausgeführt, wenn „group_show“ die Kategorie nicht gefunden hat.\n\nDer Request verwendet:\n- name: technischer CKAN-Name, z. B. „agri“\n- title: lesbarer Kategoriename\n- description: Beschreibung der Kategorie\n- extras.dcat_ap_de_theme_id: offizielle DCAT-AP.de-ID, z. B. „AGRI“\n\nFür diesen Schritt ist ein gültiger CKAN API-Token mit ausreichenden Rechten erforderlich."
+    },
+    {
+      "parameters": {
+        "content": "Zweck des Workflows:\nDieser Workflow verwaltet die 13 offiziellen DCAT-AP.de Kategorien als CKAN Groups.\n\nÜber das Formular kann ausgewählt werden:\n- create: fehlende Kategorien werden automatisch angelegt\n- delete: vorbereitete Kategorien werden endgültig aus CKAN entfernt\n\nAblauf bei create:\n1. Kategorienliste vorbereiten\n2. Pro Kategorie prüfen, ob sie bereits existiert\n3. Vorhandene Kategorien überspringen\n4. Fehlende Kategorien automatisch anlegen\n\nAblauf bei purge:\n1. Kategorienliste vorbereiten\n2. Pro Kategorie die passende CKAN Group per group_purge entfernen\n\nDer Create-Teil ist idempotent:\nEr kann mehrfach ausgeführt werden, ohne dass doppelte Kategorien entstehen.\n\nWichtig:\ngroup_purge ist destruktiv und entfernt Gruppen endgültig. Dieser Pfad sollte nur bewusst ausgeführt werden.\n\nVor der Ausführung müssen in der Docker-Compose-Konfiguration folgende Environment Variables gesetzt sein:\n- CKAN_BASE_URL\n- CKAN_API_TOKEN\n- N8N_BLOCK_ENV_ACCESS_IN_NODE=false\n\nDer API-Token wird nicht direkt im Workflow gespeichert, sondern zur Laufzeit über $env[\"CKAN_API_TOKEN\"] aus der n8n-Umgebung gelesen.\n\nHinweis zu [ERROR: access to env vars denied]:\nDieser Hinweis kann in der n8n-Editor-Vorschau oder in einzelnen Expression-Feldern auftauchen, obwohl der Workflow bei der tatsächlichen Ausführung korrekt funktioniert. Wenn die Nodes erfolgreich ausgeführt werden, kann diese Vorschau-Meldung ignoriert werden. Relevant ist nur ein echter Fehler während der Ausführung.",
+        "height": 704,
+        "width": 624
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -416,
+        -512
+      ],
+      "typeVersion": 1,
+      "id": "145be430-fd5f-4b09-9e9c-88794cf690e3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ckanBaseUrl = $env[\"CKAN_BASE_URL\"];\nconst apiKey = $env[\"CKAN_API_TOKEN\"];\n\nif (!ckanBaseUrl) {\n  throw new Error(\"CKAN_BASE_URL ist nicht gesetzt oder für n8n nicht zugänglich.\");\n}\n\nif (!apiKey) {\n  throw new Error(\"CKAN_API_TOKEN ist nicht gesetzt oder für n8n nicht zugänglich.\");\n}\n\nconst categories = [\n  {\n    name: 'agri',\n    theme_id: 'AGRI',\n    title: 'Landwirtschaft, Fischerei, Forstwirtschaft und Nahrungsmittel',\n    description: 'Daten zu Landwirtschaft, Fischerei, Forstwirtschaft und Nahrungsmitteln.'\n  },\n  {\n    name: 'econ',\n    theme_id: 'ECON',\n    title: 'Wirtschaft und Finanzen',\n    description: 'Daten zu Wirtschaft, Finanzen, Handel, Steuern und Märkten.'\n  },\n  {\n    name: 'educ',\n    theme_id: 'EDUC',\n    title: 'Bildung, Kultur und Sport',\n    description: 'Daten zu Bildung, Kultur, Sport und kulturellem Erbe.'\n  },\n  {\n    name: 'ener',\n    theme_id: 'ENER',\n    title: 'Energie',\n    description: 'Daten zu Energie, Energieversorgung, Energieverbrauch und Energieinfrastruktur.'\n  },\n  {\n    name: 'envi',\n    theme_id: 'ENVI',\n    title: 'Umwelt',\n    description: 'Daten zu Umwelt, Klima, Natur, Ressourcen und Umweltschutz.'\n  },\n  {\n    name: 'gove',\n    theme_id: 'GOVE',\n    title: 'Regierung und öffentlicher Sektor',\n    description: 'Daten zu Regierung, Verwaltung, öffentlichem Sektor und politischen Prozessen.'\n  },\n  {\n    name: 'heal',\n    theme_id: 'HEAL',\n    title: 'Gesundheit',\n    description: 'Daten zu Gesundheit, Gesundheitswesen, medizinischer Versorgung und öffentlicher Gesundheit.'\n  },\n  {\n    name: 'intr',\n    theme_id: 'INTR',\n    title: 'Internationale Themen',\n    description: 'Daten zu internationalen Angelegenheiten, Außenbeziehungen und Entwicklung.'\n  },\n  {\n    name: 'just',\n    theme_id: 'JUST',\n    title: 'Justiz, Rechtssystem und öffentliche Sicherheit',\n    description: 'Daten zu Justiz, Rechtssystem, Kriminalität, öffentlicher Sicherheit und Rechtswesen.'\n  },\n  {\n    name: 'regi',\n    theme_id: 'REGI',\n    title: 'Regionen und Städte',\n    description: 'Daten zu Regionen, Städten, Gemeinden, Raumordnung und lokaler Entwicklung.'\n  },\n  {\n    name: 'soci',\n    theme_id: 'SOCI',\n    title: 'Bevölkerung und Gesellschaft',\n    description: 'Daten zu Bevölkerung, Gesellschaft, Demografie, sozialen Fragen und Lebensbedingungen.'\n  },\n  {\n    name: 'tech',\n    theme_id: 'TECH',\n    title: 'Wissenschaft und Technologie',\n    description: 'Daten zu Wissenschaft, Forschung, Innovation, Technologie und Digitalisierung.'\n  },\n  {\n    name: 'tran',\n    theme_id: 'TRAN',\n    title: 'Verkehr',\n    description: 'Daten zu Verkehr, Mobilität, Transportinfrastruktur und Logistik.'\n  }\n];\n\nreturn categories.map(category => ({\n  json: {\n    ...category\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        576
+      ],
+      "id": "91de7773-3601-4973-bc28-365007f2f247",
+      "name": "Code in JavaScript1",
+      "notesInFlow": true,
+      "notes": "Bereitet die 13 offiziellen DCAT-AP.de Kategorien als einzelne Items vor.\n\nJedes Item enthält:\n- den technischen CKAN-Namen, z. B. „agri“\n- die offizielle DCAT-AP.de-ID, z. B. „AGRI“\n- den lesbaren Titel\n- eine Beschreibung\n- die CKAN-Basis-URL\n- den API-Token für berechtigte Schreibzugriffe\n\nWichtig:\nDer CKAN-Name ist klein geschrieben, da CKAN für Group-Namen nur lowercase alphanumerische Zeichen sowie „-“ und „_“ erlaubt.\nDie offizielle DCAT-ID bleibt zusätzlich als theme_id erhalten."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env[\"CKAN_BASE_URL\"].replace(/\\/$/, \"\") + \"/api/3/action/group_purge\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ $env[\"CKAN_API_TOKEN\"].trim() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id\": \"{{ $('Code in JavaScript1').item.json.name }}\"\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        368,
+        576
+      ],
+      "id": "f2a77f9b-d23a-42da-a923-ccf67cb2dda5",
+      "name": "group_delete",
+      "notesInFlow": true,
+      "onError": "continueErrorOutput",
+      "notes": "Legt eine fehlende DCAT-AP.de Kategorie als CKAN Group an.\n\nDieser Node wird nur ausgeführt, wenn „group_show“ die Kategorie nicht gefunden hat.\n\nDer Request verwendet:\n- name: technischer CKAN-Name, z. B. „agri“\n- title: lesbarer Kategoriename\n- description: Beschreibung der Kategorie\n- extras.dcat_ap_de_theme_id: offizielle DCAT-AP.de-ID, z. B. „AGRI“\n\nFür diesen Schritt ist ein gültiger CKAN API-Token mit ausreichenden Rechten erforderlich."
+    },
+    {
+      "parameters": {
+        "content": "Dieser Workflow entfernt die vorbereiteten DCAT-AP.de Kategorien endgültig aus CKAN.\n\nAblauf:\n1. Die Kategorienliste wird vorbereitet.\n2. Für jede Kategorie wird die entsprechende CKAN Group per group_purge entfernt.\n3. Der Workflow verwendet die technischen CKAN-Namen, z. B. „agri“, „econ“, „educ“.\n4. Für diesen Schritt ist ein gültiger CKAN API-Token mit ausreichenden Admin-Rechten erforderlich.\n\nWichtig:\ngroup_purge ist ein endgültigeres Löschen als group_delete. Während group_delete Gruppen meist nur „soft“ löscht und sie in der Datenbank als gelöscht/deleted zurücklassen kann, soll group_purge die Gruppe vollständig entfernen.\n\nDieser Workflow sollte daher nur bewusst und vorsichtig ausgeführt werden, da die Kategorien danach nicht nur aus der Oberfläche verschwinden, sondern tatsächlich aus CKAN entfernt werden sollen.",
+        "height": 288,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -96,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "f4bbe5c8-9be8-4676-89f4-522c48fbff37",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ckanBaseUrl = $env[\"CKAN_BASE_URL\"];\nconst apiKey = $env[\"CKAN_API_TOKEN\"];\n\nif (!ckanBaseUrl) {\n  throw new Error(\"CKAN_BASE_URL ist nicht gesetzt oder für n8n nicht zugänglich.\");\n}\n\nif (!apiKey) {\n  throw new Error(\"CKAN_API_TOKEN ist nicht gesetzt oder für n8n nicht zugänglich.\");\n}\n\nconst categories = [\n  {\n    name: 'agri',\n    theme_id: 'AGRI',\n    title: 'Landwirtschaft, Fischerei, Forstwirtschaft und Nahrungsmittel',\n    description: 'Daten zu Landwirtschaft, Fischerei, Forstwirtschaft und Nahrungsmitteln.'\n  },\n  {\n    name: 'econ',\n    theme_id: 'ECON',\n    title: 'Wirtschaft und Finanzen',\n    description: 'Daten zu Wirtschaft, Finanzen, Handel, Steuern und Märkten.'\n  },\n  {\n    name: 'educ',\n    theme_id: 'EDUC',\n    title: 'Bildung, Kultur und Sport',\n    description: 'Daten zu Bildung, Kultur, Sport und kulturellem Erbe.'\n  },\n  {\n    name: 'ener',\n    theme_id: 'ENER',\n    title: 'Energie',\n    description: 'Daten zu Energie, Energieversorgung, Energieverbrauch und Energieinfrastruktur.'\n  },\n  {\n    name: 'envi',\n    theme_id: 'ENVI',\n    title: 'Umwelt',\n    description: 'Daten zu Umwelt, Klima, Natur, Ressourcen und Umweltschutz.'\n  },\n  {\n    name: 'gove',\n    theme_id: 'GOVE',\n    title: 'Regierung und öffentlicher Sektor',\n    description: 'Daten zu Regierung, Verwaltung, öffentlichem Sektor und politischen Prozessen.'\n  },\n  {\n    name: 'heal',\n    theme_id: 'HEAL',\n    title: 'Gesundheit',\n    description: 'Daten zu Gesundheit, Gesundheitswesen, medizinischer Versorgung und öffentlicher Gesundheit.'\n  },\n  {\n    name: 'intr',\n    theme_id: 'INTR',\n    title: 'Internationale Themen',\n    description: 'Daten zu internationalen Angelegenheiten, Außenbeziehungen und Entwicklung.'\n  },\n  {\n    name: 'just',\n    theme_id: 'JUST',\n    title: 'Justiz, Rechtssystem und öffentliche Sicherheit',\n    description: 'Daten zu Justiz, Rechtssystem, Kriminalität, öffentlicher Sicherheit und Rechtswesen.'\n  },\n  {\n    name: 'regi',\n    theme_id: 'REGI',\n    title: 'Regionen und Städte',\n    description: 'Daten zu Regionen, Städten, Gemeinden, Raumordnung und lokaler Entwicklung.'\n  },\n  {\n    name: 'soci',\n    theme_id: 'SOCI',\n    title: 'Bevölkerung und Gesellschaft',\n    description: 'Daten zu Bevölkerung, Gesellschaft, Demografie, sozialen Fragen und Lebensbedingungen.'\n  },\n  {\n    name: 'tech',\n    theme_id: 'TECH',\n    title: 'Wissenschaft und Technologie',\n    description: 'Daten zu Wissenschaft, Forschung, Innovation, Technologie und Digitalisierung.'\n  },\n  {\n    name: 'tran',\n    theme_id: 'TRAN',\n    title: 'Verkehr',\n    description: 'Daten zu Verkehr, Mobilität, Transportinfrastruktur und Logistik.'\n  }\n];\n\nreturn categories.map(category => ({\n  json: {\n    ...category\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        304
+      ],
+      "id": "8b53f606-bcbb-4a20-9f06-f881e8aed43c",
+      "name": "Code in JavaScript",
+      "notesInFlow": true,
+      "notes": "Bereitet die 13 offiziellen DCAT-AP.de Kategorien als einzelne Items vor.\n\nJedes Item enthält:\n- den technischen CKAN-Namen, z. B. „agri“\n- die offizielle DCAT-AP.de-ID, z. B. „AGRI“\n- den lesbaren Titel\n- eine Beschreibung\n- die CKAN-Basis-URL\n- den API-Token für berechtigte Schreibzugriffe\n\nWichtig:\nDer CKAN-Name ist klein geschrieben, da CKAN für Group-Namen nur lowercase alphanumerische Zeichen sowie „-“ und „_“ erlaubt.\nDie offizielle DCAT-ID bleibt zusätzlich als theme_id erhalten."
+    },
+    {
+      "parameters": {
+        "formTitle": "DCAT-AP.de Kategorien verwalten",
+        "formDescription": "Wähle aus, ob die Kategorien angelegt oder gelöscht werden sollen.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Was möchtest du ausführen?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "create"
+                  },
+                  {
+                    "option": "delete"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -512,
+        432
+      ],
+      "id": "89cb2294-90b4-48f3-92df-4385648ab3dd",
+      "name": "On form submission",
+      "webhookId": "8a1dceaf-cdeb-4380-a14d-fe0995719135"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json['Was möchtest du ausführen?'] }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fd30d9ec-5fe0-4d1f-8026-31a265208ca5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f08499f7-c5e2-44be-a8b0-ebbea9e7c3d5",
+                    "leftValue": "={{ $json['Was möchtest du ausführen?'] }}",
+                    "rightValue": "delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        432
+      ],
+      "id": "82b7c6cd-5a02-4469-9788-559612b7aa96",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4f3966bd-7ff4-4e1a-9d94-ca19cd45ac9b",
+              "name": "ckanBaseUrl ",
+              "value": "={{ $env[\"CKAN_BASE_URL\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "4a7f2d22-e675-40dc-9966-16c587284c91",
+              "name": "apiKey",
+              "value": "={{ $env[\"CKAN_API_TOKEN\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -64,
+        576
+      ],
+      "id": "05bfe5ba-6043-46d2-8c79-39888f53c21e",
+      "name": "Variablen setzten_purge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4f3966bd-7ff4-4e1a-9d94-ca19cd45ac9b",
+              "name": "ckanBaseUrl ",
+              "value": "={{ $env[\"CKAN_BASE_URL\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "4a7f2d22-e675-40dc-9966-16c587284c91",
+              "name": "apiKey",
+              "value": "={{ $env[\"CKAN_API_TOKEN\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -64,
+        304
+      ],
+      "id": "20d13cc8-549c-48b7-a3d5-0fcb8614b6cc",
+      "name": "Variablen setzten_create"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "group_show": {
+      "main": [
+        [
+          {
+            "node": "Status: bereits vorhanden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "group_create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "group_delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "group_show",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "group_delete": {
+      "main": [
+        []
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Variablen setzten_create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Variablen setzten_purge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variablen setzten_purge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variablen setzten_create": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fb191790-3169-41ac-a3a4-9c10eae49c02",
+  "meta": {
+    "instanceId": "c3b8f9345e16c1817ace2546e313a0e7e9b64687d7539c154284c1c3894df2a0"
+  },
+  "id": "hsAXZ4kzqWQc8Na5",
+  "tags": []
+}
