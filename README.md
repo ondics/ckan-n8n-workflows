@@ -52,7 +52,7 @@ Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularie
 * Icons werden nicht konfiguriert
 
 Getestet mit CKAN 2.11 und self-hosted n8n
-
+Download/n8n-Url: [n8n-admin-workflows/DCAT-AP.de Kategorien anlegen (3).json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/DCAT-AP.de Kategorien anlegen (3).json)
 
 # Autoren-bezogene Workflows
 
