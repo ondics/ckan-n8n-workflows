@@ -40,35 +40,18 @@ Workflow importieren
 
 # Administrative Workflows
 
-## DCAT-AP.de Kategorien verwalten
-
-Die Standard-DCAT-AP.de Kategorien werden in CKAN angelegt und bei Bedarf per group_purge wieder entfernt.
-Die Auswahl erfolgt über ein Formular im Workflow. 
-Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/data-theme)
-
-Hinzufügen der 13 DCAT-AP.de Kategorien/Gruppen (DCAT-AP Sprechweise: data themes)
-Vorhandene Kategorien werden erkannt und übersprungen
-Fehlende Kategorien werden automatisch angelegt
-Die Gruppenbeschreibungen sind auf Deutsch
-Die Namen der Kategorien entsprechen dem DCAT-AP.de Standard (Beispiel: agri)
-Die offizielle DCAT-AP.de-ID wird als Extra gespeichert
-Icons werden nicht konfiguriert
-CKAN_BASE_URL und CKAN_API_TOKEN werden über Environment Variables gelesen
-Getestet mit CKAN 2.11 und self-hosted n8n
-
-Download/n8n-Url: n8n-admin-workflows/DCAT-AP.de Kategorien anlegen.json
-
 ## DCAT-AP.de Kategorien einrichten
 
 Die Standard-DCAT-AP.de Kategorien werden in CKAN angelegt. Und bei Bedarf auch gelöscht.
 Quelle: [EU Vocabularies: data-theme](https://op.europa.eu/de/web/eu-vocabularies/concept-scheme/-/resource?uri=http://publications.europa.eu/resource/authority/data-theme)
 
 * Hinzufügen der 13 DCAT-AP.de Kategorien/Gruppen (DCAT-AP Sprechweise: data themes)
+* Vorhandene Kategorien werden erkannt und übersprungen
 * Die Gruppenbeschreibungen sind auf deutsch
 * Die Namen der Kategorien entsprechen dem DCAT-AP.de Standard (Beispiel: `agri`)
 * Icons werden nicht konfiguriert
 
-Getestet mit CKAN 2.11
+Getestet mit CKAN 2.11 und self-hosted n8n
 
 Download/n8n-Url: [n8n-admin-workflows/dcatapde-groups.json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/dcatapde-groups.json)
 
