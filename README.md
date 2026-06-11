@@ -55,6 +55,24 @@ Getestet mit CKAN 2.11 und self-hosted n8n
 
 Download/n8n-Url: [n8n-admin-workflows/dcatapde-groups.json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/dcatapde-groups.json)
 
+---
+
+## PEGELONLINE Pegelstände nach CKAN aktualisieren
+
+Aktuelle Wasserstandsmesswerte werden alle 10 Minuten von der PEGELONLINE-API abgerufen und im CKAN DataStore gespeichert. 
+Neue Messwerte werden eingefügt, geänderte aktualisiert, unveränderte übersprungen.
+
+* Alle 13 Schritte sind nummeriert und mit erklärenden Sticky Notes dokumentiert
+* Konfiguration zentral in Node 02 Konfiguration bearbeiten (CKAN-URL, Resource-ID, Messstellen)
+* Beliebig viele Messstellen konfigurierbar, einzeln aktivier- und deaktivierbar
+* Messstellen werden anhand ihrer PEGELONLINE-UUID identifiziert
+* CKAN-API-Token wird als n8n Credential hinterlegt, nicht im Workflow
+
+Quelle: PEGELONLINE REST-API v2
+Getestet mit CKAN 2.11 und self-hosted n8n
+
+Download/n8n-URL: n8n-admin-workflows/pegelstaende-ckan-pegelonline-template.json
+
 # Autoren-bezogene Workflows
 
 ## schaumermal, was da noch kommt...
