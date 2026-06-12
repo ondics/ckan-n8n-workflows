@@ -30,11 +30,12 @@ Workflow importieren
 
 1. Workflow-Datei oder RAW-GitHub-URL kopieren
 2. In n8n:
-
    * `Workflows`
    * `Import from URL`
 3. Workflow importieren
-4. Konfiguration anpassen
+4. Sicherstellen dass CKAN_SITE_URL und CKAN_N8N_API_TOKEN als Environment Variablen in n8n zur Verfügung stehen. Beim ersten Workflow sollten die Credentials im CKAN-Node entsprechend eingegeben werden (als `{{ $env["CKAN_SITE_URL"] }}` und `{{ $env["CKAN_N8N_API_TOKEN"] }}`)
+5. Konfiguration anpassen (je nach Workflow)
+
 
 ---
 
@@ -69,99 +70,21 @@ Neue Messwerte werden eingefügt, geänderte aktualisiert, unveränderte übersp
 * CKAN-API-Token wird als n8n Credential hinterlegt, nicht im Workflow
 
 
-### Einrichtung in n8n
+Konfiguration: 
+* Sicherstellen dass CKAN Datensatz mit einer Ressource für Messwerte existiert. Die Ressource ist ein Datastore mit folgenden Feldern (kann im Tabellendesigner angelegt werden):
+  * `zeitstempel`: Timestamp
+  * `messstelle_id`: Integer
+  * `pegelstand_in_m`: Numeric
+* Anpassen der CKAN Endpunkte (im Node `2: Konfiguration`):
+  * `ckanBaseUrl`: 'https://DEINE-CKAN-INSTANZ.de',
+  * `pegelwerteResourceId`: 'DEINE_CKAN_DATASTORE_RESOURCE_ID',
+* Messtellen festlegen (im Node `2: Konfiguration`): per Recherche unter [PegelOnline](https://pegelonline.wsv.de/gast/pegeltabelle) (im Node 2: Konfiguration`)
 
-Nach dem Import des Workflows müssen die CKAN-Zugangsdaten und die Konfiguration angepasst werden.
+Quelle: [PEGELONLINE REST-API v2](https://www.pegelonline.wsv.de/webservice/guideRestapi)
 
-#### 1. CKAN-API-Token hinterlegen
-
-Der CKAN-API-Token wird nicht direkt im Workflow gespeichert, sondern als n8n Credential hinterlegt.
-
-In n8n:
-
-1. Einen der CKAN **HTTP Request Nodes** öffnen  
-2. Unter **Authentication** auswählen:
-
-```text
-Generic Credential Type
-````
-
-3. Als Credential wählen:
-
-```text
-Header Auth
-```
-
-4. Neue Credentials anlegen und folgenden Header hinterlegen:
-
-| Name            | Wert                  |
-| --------------- | --------------------- |
-| `Authorization` | `DEIN_CKAN_API_TOKEN` |
-
-5. Credential speichern und in allen CKAN HTTP Nodes auswählen
-
-Der Token wird dann automatisch bei allen Requests an CKAN mitgesendet und muss nicht im Workflow selbst gespeichert werden.
-
-> Hinweis: PEGELONLINE benötigt keine Authentifizierung. Der API-Token wird ausschließlich für CKAN-Schreibzugriffe verwendet.
-
-#### 2. Konfiguration im Workflow anpassen
-
-Die wichtigsten Werte werden zentral im Node **02 Konfiguration bearbeiten** gepflegt.
-
-Dort müssen folgende Werte angepasst werden:
-
-| Einstellung | Beschreibung |
-|------------|--------------|
-| `ckanBaseUrl` | Basis-URL der CKAN-Instanz, z. B. `https://datenportal.example.de` |
-| `pegelwerteResourceId` | Resource-ID der dynamischen CKAN-DataStore-Ressource für Pegelwerte |
-| `messstellenResourceId` | Resource-ID der statischen Messstellen-Ressource |
-| `timezone` | Zeitzone für Zeitstempel, z. B. `Europe/Berlin` |
-| `pegelApiBaseUrl` | Basis-URL der PEGELONLINE-API |
-| `messstellen` | Liste der Messstellen mit interner ID und PEGELONLINE-UUID |
-
-#### 3. HTTP Request Nodes prüfen
-
-In den CKAN-HTTP-Nodes muss die CKAN-URL aus der Konfiguration verwendet werden.
-
-Typische CKAN-Endpunkte im Workflow sind:
-
-| Zweck | CKAN Action |
-|------|-------------|
-| Datensätze suchen | `/api/3/action/datastore_search` |
-| Datensätze einfügen oder aktualisieren | `/api/3/action/datastore_upsert` |
-| Ressourceninformationen abrufen | `/api/3/action/resource_show` |
-
-Bei schreibenden Requests muss der Header `Authorization` gesetzt sein.
-
-#### 4. Messstellen eintragen
-
-Messstellen werden über ihre PEGELONLINE-UUID identifiziert.
-
-Beispiel:
-
-{
-  "messstelle_id": 1,
-  "name": "Plochingen",
-  "pegelonline_uuid": "BEISPIEL-UUID",
-  "aktiv": true
-}
-
-Nur Messstellen mit `"aktiv": true` werden im Workflow verarbeitet.
-
-### Struktur der Pegelstandsdaten
-
-Die dynamische Ressource speichert historische Pegelstände der Messstellen und wird regelmäßig aktualisiert.
-
-| Feld | Typ | Beschreibung | Pflichtfeld |
-|-------|------|---------------|--------------|
-| `zeitstempel` | Timestamp | Zeitpunkt der Messung des Pegelstands | Ja |
-| `messstelle_id` | Integer | Eindeutige ID der zugehörigen Messstelle (Referenz auf Messstelle) | Ja |
-| `pegelstand_in_m` | Numeric | Gemessener Pegelstand in Metern | Ja |
-
-Quelle: PEGELONLINE REST-API v2
 Getestet mit CKAN 2.11 und self-hosted n8n
 
-Download/n8n-URL: n8n-admin-workflows/pegelstaende-ckan-pegelonline-template.json
+Download/n8n-URL:[ n8n-admin-workflows/pegelstaende-ckan-pegelonline-template.json](https://github.com/ondics/ckan-n8n-workflows/raw/refs/heads/main/n8n-admin-workflows/pegelstaende-ckan-pegelonline-template.json)
 
 ---
 
