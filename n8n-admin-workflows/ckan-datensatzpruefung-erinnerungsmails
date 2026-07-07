@@ -1,0 +1,638 @@
+{
+  "name": "CKAN Datensatzprüfung und Erinnerungsmails_V3",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# Benötigte Environment Variables\n\n## CKAN\n\n- `CKAN_SITE_URL`\n- `CKAN_API_TOKEN`\n\n## E-Mail-Empfänger\n\n- `SYSADMIN_EMAIL`\n- `TEST_EMAIL`\n- `EMAIL_FROM`\n\n## SMTP-Konfiguration\n\nSMTP-Credentials im Node **E-Mail senden** nach dem Import manuell auswählen.\n\nAlternativ kann SMTP auch über Environment Variables konfiguriert werden, zum Beispiel:\n\n- `SMTP_HOST`\n- `SMTP_PORT`\n- `SMTP_USER`\n- `SMTP_PASSWORD`\n- `SMTP_SSL`\n- `SMTP_STARTTLS`\n\n## Hinweis zur Datensatzprüfung\n\nDer Workflow holt maximal **1000 CKAN-Datensätze** und nutzt `metadata_modified` für die Prüfung.\n\nPrivate Datensätze werden mit folgendem Parameter angefragt:\n\n`include_private: true`",
+        "height": 764,
+        "width": 420,
+        "color": 4
+      },
+      "name": "Hinweis: benötigte Environment Variables",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Datensatzprüfung starten",
+        "formDescription": "Dieser Workflow prüft, welche CKAN-Datensätze länger nicht aktualisiert wurden, und erstellt Prüflisten für den Sysadmin oder die zuständigen Autorinnen und Autoren.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Auswahl der nicht aktualisierten Datensätze seit mehr als....",
+              "fieldType": "dropdown",
+              "fieldName": "pruefung_auswahl",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "4 Wochen"
+                  },
+                  {
+                    "option": "6 Monate"
+                  },
+                  {
+                    "option": "1 Jahr"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Wer soll erinnert werden?",
+              "fieldType": "dropdown",
+              "fieldName": "empfaenger_auswahl",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Nur Sysadmin erhält eine Gesamtliste"
+                  },
+                  {
+                    "option": "Nur Datensatzkontakte erhalten ihre eigenen Datensätze"
+                  },
+                  {
+                    "option": "Sysadmin und Datensatzkontakte"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Ausführung",
+              "fieldType": "dropdown",
+              "fieldName": "ausfuehrung",
+              "defaultValue": "Nur Vorschau anzeigen",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Nur Vorschau anzeigen"
+                  },
+                  {
+                    "option": "Testversand an TEST_EMAIL"
+                  },
+                  {
+                    "option": "E-Mails wirklich senden"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Zusätzlicher Hinweis für die E-Mail",
+              "fieldType": "textarea",
+              "fieldName": "notiz",
+              "placeholder": "Optional, z. B. Bitte prüfen Sie die Aktualität der Datensätze bis Ende des Monats."
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "appendAttribution": false,
+          "buttonLabel": "Prüfung starten",
+          "customCss": ":root {\n  --font-family: Georgia, \"Times New Roman\", serif;\n  --font-weight-normal: 400;\n  --font-weight-bold: 700;\n\n  --font-size-body: 18px;\n  --font-size-label: 16px;\n  --font-size-header: 22px;\n  --font-size-paragraph: 18px;\n\n  --font-size-html-h1: 34px;\n  --font-size-html-h2: 28px;\n  --font-size-html-h3: 22px;\n  --font-size-html-h4: 18px;\n\n  --color-primary: #990000;\n  --color-primary-shade-1: #7f0000;\n  --color-primary-shade-2: #660000;\n}\n\nhtml,\nbody {\n  width: 100% !important;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n\nbody {\n  background: #f2f2f2 !important;\n  color: #222 !important;\n  display: flex !important;\n  justify-content: center !important;\n  align-items: flex-start !important;\n}\n\nmain,\nsection,\n.form-container {\n  background: #f2f2f2 !important;\n  max-width: none !important;\n  width: 100% !important;\n  margin: 0 auto !important;\n  display: flex !important;\n  justify-content: center !important;\n}\n\nform {\n  background: #f6f6f6 !important;\n  border: 1px solid #b7b7b7 !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n  width: min(980px, calc(100vw - 48px)) !important;\n  max-width: 980px !important;\n  margin: 32px auto !important;\n  padding: 30px 36px !important;\n  text-align: left !important;\n}\n\nh1 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin-bottom: 22px !important;\n  border-bottom: 1px solid #c8c8c8;\n  padding-bottom: 12px;\n}\n\nh2 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 0 0 18px 0 !important;\n}\n\nh3 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 18px 0 10px 0 !important;\n  border-bottom: 1px solid #d6d6d6;\n  padding-bottom: 4px;\n}\n\np,\nli,\ndiv,\nspan {\n  color: #222 !important;\n  text-align: left !important;\n  line-height: 1.5 !important;\n}\n\nul {\n  margin: 10px 0 18px 22px !important;\n  padding: 0 !important;\n}\n\nli {\n  margin: 6px 0 !important;\n}\n\na {\n  color: #990000 !important;\n  text-decoration: underline !important;\n  font-weight: 400 !important;\n}\n\ncode {\n  background: #ececec !important;\n  border: 1px solid #d2d2d2 !important;\n  border-radius: 4px !important;\n  padding: 1px 5px !important;\n  font-size: 0.95em !important;\n}\n\nbutton {\n  background: linear-gradient(#bb0000, #8f0000) !important;\n  color: #fff !important;\n  border: 1px solid #6f0000 !important;\n  border-radius: 6px !important;\n  font-weight: 700 !important;\n  box-shadow: none !important;\n}\n\nbutton:hover {\n  background: linear-gradient(#a40000, #7f0000) !important;\n}\n\ninput,\nselect,\ntextarea {\n  background: #fff !important;\n  border: 1px solid #c8c8c8 !important;\n  border-radius: 6px !important;\n  color: #222 !important;\n}\n\n.report-page {\n  text-align: left !important;\n}\n\n.report-box {\n  background: #fdfdfd;\n  border: 1px solid #c8c8c8;\n  border-radius: 8px;\n  padding: 18px 20px;\n  margin: 0 0 18px 0;\n}\n\n.note-box {\n  background: #f3f3f3;\n}\n\n.lead {\n  font-size: 1.08em;\n  margin-bottom: 14px;\n}"
+        }
+      },
+      "name": "Formular: Datensatzprüfung starten",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -256,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const form = $input.first().json;\nconst startart = form.startart || \"formular\";\n\nconst pruefungAuswahl =\n  form.pruefung_auswahl ||\n  form[\"Was soll geprüft werden?\"];\n\nconst empfaengerAuswahl =\n  form.empfaenger_auswahl ||\n  form[\"Wer soll erinnert werden?\"];\n\nconst ausfuehrung =\n  form.ausfuehrung ||\n  form[\"Ausführung\"];\n\nconst notiz =\n  form.notiz ||\n  form[\"Zusätzlicher Hinweis für die E-Mail\"] ||\n  \"\";\n\nlet pruefung;\nlet pruefungText;\nlet thresholdDate = new Date();\nconst today = new Date();\n\nif (pruefungAuswahl === \"4 Wochen\") {\n  pruefung = \"4_wochen\";\n  pruefungText = \"4 Wochen nicht aktualisiert\";\n  thresholdDate.setDate(today.getDate() - 28);\n} else if (pruefungAuswahl === \"6 Monate\") {\n  pruefung = \"6_monate\";\n  pruefungText = \"länger als 6 Monate nicht aktualisiert\";\n  thresholdDate.setMonth(today.getMonth() - 6);\n} else if (pruefungAuswahl === \"1 Jahr\") {\n  pruefung = \"1_jahr\";\n  pruefungText = \"länger als 1 Jahr nicht aktualisiert\";\n  thresholdDate.setFullYear(today.getFullYear() - 1);\n} else {\n  throw new Error(\"Unbekannte Prüfauswahl: \" + pruefungAuswahl);\n}\n\nlet empfaenger;\nif (empfaengerAuswahl === \"Nur Sysadmin erhält eine Gesamtliste\") {\n  empfaenger = \"sysadmin\";\n} else if (empfaengerAuswahl === \"Nur Datensatzkontakte erhalten ihre eigenen Datensätze\") {\n  empfaenger = \"autoren\";\n} else if (empfaengerAuswahl === \"Sysadmin und Datensatzkontakte\") {\n  empfaenger = \"beide\";\n} else {\n  throw new Error(\"Unbekannte Empfänger-Auswahl: \" + empfaengerAuswahl);\n}\nlet modus;\nif (ausfuehrung === \"E-Mails wirklich senden\") {\n  modus = \"senden\";\n} else if (ausfuehrung === \"Testversand an TEST_EMAIL\") {\n  modus = \"test\";\n} else {\n  modus = \"vorschau\";\n}\n\n\n\nconst sysadminEmail = $env.SYSADMIN_EMAIL || \"\";\nconst testEmail = $env.TEST_EMAIL || \"\";\nconst emailFrom = $env.EMAIL_FROM || \"\";\n\n\nif (!sysadminEmail && (empfaenger === \"sysadmin\" || empfaenger === \"beide\")) {\n  throw new Error(\"SYSADMIN_EMAIL ist nicht gesetzt, obwohl Sysadmin-Versand ausgewählt wurde.\");\n}\n\nif (modus === \"test\" && !testEmail) {\n  throw new Error(\"TEST_EMAIL ist nicht gesetzt, obwohl Testversand ausgewählt wurde.\");\n}\n\nif ((modus === \"test\" || modus === \"senden\") && !emailFrom) {\n  throw new Error(\"EMAIL_FROM ist nicht gesetzt. Diese Variable wird als Absenderadresse verwendet.\");\n}\n\nreturn [\n  {\n    json: {\n      pruefung,\n      pruefungText,\n      empfaenger,\n      modus,\n      notiz,\n      todayIso: today.toISOString(),\n      thresholdDateIso: thresholdDate.toISOString(),\n      thresholdTimestamp: thresholdDate.getTime(),\n      sysadminEmail,\n      testEmail,\n      emailFrom,\n      maxRows: 1000,\n      includePrivate: true,\n      startart,\n    }\n  }\n];"
+      },
+      "name": "Formularwerte und Prüfparameter vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ckanResponse = $input.first().json;\n\n// Die CKAN-Antwort kann je nach Node unterschiedlich aufgebaut sein.\n// HTTP Request Node: response.result.results\n// Custom CKAN Node: response.data.results\n\nconst response = ckanResponse.body || ckanResponse;\n\nif (!response) {\n  throw new Error(\"Keine Antwort von CKAN erhalten.\");\n}\n\nif (response.success === false || response.data?.success === false) {\n  const errorMessage =\n    response.error?.message ||\n    response.data?.error?.message ||\n    JSON.stringify(response.error || response.data?.error || response);\n\n  throw new Error(\"CKAN-API-Fehler: \" + errorMessage);\n}\n\nconst result =\n  response.result ||\n  response.data ||\n  response.body?.result ||\n  response.body?.data ||\n  {};\n\nconst packages = result.results || [];\n\nreturn [\n  {\n    json: {\n      ckanCount: result.count ?? packages.length,\n      returnedCount: packages.length,\n      packages\n    }\n  }\n];"
+      },
+      "name": "CKAN-Antwort prüfen und extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst params = $(\"Formularwerte und Prüfparameter vorbereiten\").first().json;\nconst startart = params.startart || \"formular\";\n\nconst packages = data.packages || [];\nconst thresholdTimestamp = params.thresholdTimestamp;\n\nconst ckanSiteUrl = String($env.CKAN_SITE_URL || \"\").replace(/\\/$/, \"\");\nconst sysadminEmail = params.sysadminEmail;\nconst testEmail = params.testEmail;\nconst empfaenger = params.empfaenger;\nconst modus = params.modus;\nconst pruefungText = params.pruefungText;\nconst notiz = params.notiz || \"\";\n\nfunction escapeHtml(value) {\n  return String(value ?? \"\")\n    .replaceAll(\"&\", \"&amp;\")\n    .replaceAll(\"<\", \"&lt;\")\n    .replaceAll(\">\", \"&gt;\")\n    .replaceAll('\"', \"&quot;\")\n    .replaceAll(\"'\", \"&#039;\");\n}\n\nfunction cleanEmail(value) {\n  if (!value) return null;\n  const email = String(value).trim();\n  if (!email) return null;\n  if (!email.includes(\"@\")) return null;\n  return email;\n}\n\nfunction formatDateGerman(dateValue) {\n  if (!dateValue) return \"unbekannt\";\n  const date = new Date(dateValue);\n  if (Number.isNaN(date.getTime())) return \"unbekannt\";\n  return date.toLocaleDateString(\"de-DE\");\n}\n\nfunction daysSince(dateValue) {\n  const date = new Date(dateValue);\n  if (Number.isNaN(date.getTime())) return null;\n  const diffMs = Date.now() - date.getTime();\n  return Math.floor(diffMs / (1000 * 60 * 60 * 24));\n}\n\nfunction datasetUrl(pkg) {\n  if (!pkg.name) return ckanSiteUrl;\n  return `${ckanSiteUrl}/dataset/${encodeURIComponent(pkg.name)}`;\n}\n\nfunction getOwnerOrg(pkg) {\n  return (\n    pkg.owner_org ||\n    pkg.organization?.id ||\n    pkg.organization?.name ||\n    null\n  );\n}\n\nfunction contactLabel(contact) {\n  if (!contact) return \"keine Kontaktadresse\";\n\n  const parts = [];\n\n  if (contact.email) parts.push(contact.email);\n  if (contact.source) parts.push(contact.source);\n  if (contact.name) parts.push(contact.name);\n\n  return parts.join(\" · \") || \"keine Kontaktadresse\";\n}\n\nfunction wrapEmail(title, innerHtml) {\n  return `\n    <div style=\"\n      background: #f2f2f2;\n      color: #222;\n      font-family: Georgia, 'Times New Roman', serif;\n      padding: 28px 18px;\n    \">\n      <div style=\"\n        max-width: 820px;\n        margin: 0 auto;\n        background: #f6f6f6;\n        border: 1px solid #b7b7b7;\n        border-radius: 10px;\n        padding: 28px 34px;\n      \">\n        <h1 style=\"\n          color: #990000;\n          font-weight: 400;\n          font-size: 30px;\n          line-height: 1.2;\n          margin: 0 0 18px 0;\n          padding-bottom: 12px;\n          border-bottom: 1px solid #c8c8c8;\n        \">\n          ${escapeHtml(title)}\n        </h1>\n\n        ${innerHtml}\n      </div>\n    </div>\n  `;\n}\n\nfunction emailBox(innerHtml) {\n  return `\n    <div style=\"\n      background: #fdfdfd;\n      border: 1px solid #c8c8c8;\n      border-radius: 8px;\n      padding: 18px 20px;\n      margin: 0 0 18px 0;\n    \">\n      ${innerHtml}\n    </div>\n  `;\n}\n\nfunction buildContactRows(contacts) {\n  if (!contacts || !contacts.length) {\n    return `<p style=\"margin: 6px 0;\">Keine Datensatzkontakte vorhanden.</p>`;\n  }\n\n  return contacts.map(contact => `\n    <p style=\"margin: 6px 0; line-height: 1.5;\">\n      <strong>${escapeHtml(contact.email)}</strong><br>\n      <span style=\"font-size: 14px; color: #555;\">\n        ${escapeHtml(contact.source)}\n        ${contact.name ? ` · ${escapeHtml(contact.name)}` : \"\"}\n      </span>\n    </p>\n  `).join(\"\");\n}\n\nfunction buildDatasetRows(datasets, includeContact = false) {\n  if (!datasets.length) {\n    return `<p style=\"margin: 8px 0;\">Keine Datensätze vorhanden.</p>`;\n  }\n\n  return datasets.map((d) => {\n    const contactBlock = includeContact\n      ? `\n        <p style=\"margin: 10px 0 4px 0;\">\n          <strong>Datensatzkontakte:</strong>\n        </p>\n        ${buildContactRows(d.contacts || [])}\n      `\n      : \"\";\n\n    return `\n      <div style=\"\n        border-top: 1px solid #d6d6d6;\n        padding: 18px 0 14px 0;\n      \">\n        <h3 style=\"\n          color: #990000;\n          font-weight: 400;\n          font-size: 21px;\n          line-height: 1.25;\n          margin: 0 0 8px 0;\n        \">\n          <a href=\"${escapeHtml(d.url)}\" target=\"_blank\" style=\"\n            color: #990000;\n            text-decoration: underline;\n            font-weight: 400;\n          \">\n            ${escapeHtml(d.title)}\n          </a>\n        </h3>\n\n        <p style=\"margin: 6px 0; line-height: 1.5;\">\n          <strong>Name:</strong> ${escapeHtml(d.name)}<br>\n          <strong>Organisation:</strong> ${escapeHtml(d.organizationTitle || \"unbekannt\")}<br>\n          <strong>Letzte Änderung:</strong> ${escapeHtml(d.lastModifiedReadable)}<br>\n          <strong>Tage seit Änderung:</strong> ${escapeHtml(d.daysSinceLastUpdate ?? \"unbekannt\")}\n        </p>\n\n        ${contactBlock}\n      </div>\n    `;\n  }).join(\"\");\n}\n\nconst normalizedDatasets = [];\nconst skippedWithoutModified = [];\nconst overdueDatasets = [];\nconst datasetsWithoutContact = [];\nconst authorGroups = {};\n\nfor (const pkg of packages) {\n  const lastModified = pkg.metadata_modified || null;\n\n  if (!lastModified) {\n    skippedWithoutModified.push({\n      id: pkg.id || \"\",\n      name: pkg.name || \"\",\n      title: pkg.title || pkg.name || \"Ohne Titel\"\n    });\n    continue;\n  }\n\n  const lastModifiedDate = new Date(lastModified);\n\n  if (Number.isNaN(lastModifiedDate.getTime())) {\n    skippedWithoutModified.push({\n      id: pkg.id || \"\",\n      name: pkg.name || \"\",\n      title: pkg.title || pkg.name || \"Ohne Titel\"\n    });\n    continue;\n  }\n\n  const authorEmail = cleanEmail(pkg.author_email);\n  const maintainerEmail = cleanEmail(pkg.maintainer_email);\n\n  const contacts = [];\n\n  if (authorEmail) {\n    contacts.push({\n      email: authorEmail,\n      source: \"author_email\",\n      name: pkg.author || \"\"\n    });\n  }\n\n  if (maintainerEmail && maintainerEmail !== authorEmail) {\n    contacts.push({\n      email: maintainerEmail,\n      source: \"maintainer_email\",\n      name: pkg.maintainer || \"\"\n    });\n  }\n\n  const contactEmail = contacts[0]?.email || null;\n\n  const normalized = {\n    id: pkg.id || \"\",\n    name: pkg.name || \"\",\n    title: pkg.title || pkg.name || \"Ohne Titel\",\n    ownerOrg: getOwnerOrg(pkg),\n    organizationTitle: pkg.organization?.title || pkg.organization?.name || \"\",\n    author: pkg.author || \"\",\n    authorEmail,\n    maintainer: pkg.maintainer || \"\",\n    maintainerEmail,\n    contactEmail,\n    contactSource: contacts[0]?.source || null,\n    contacts,\n    lastModified,\n    lastModifiedReadable: formatDateGerman(lastModified),\n    daysSinceLastUpdate: daysSince(lastModified),\n    url: datasetUrl(pkg)\n  };\n\n  normalizedDatasets.push(normalized);\n\n  if (lastModifiedDate.getTime() < thresholdTimestamp) {\n    overdueDatasets.push(normalized);\n\n    if (contacts.length) {\n      for (const contact of contacts) {\n        const email = contact.email;\n\n        if (!authorGroups[email]) {\n          authorGroups[email] = [];\n        }\n\n        if (!authorGroups[email].some(dataset => dataset.id === normalized.id)) {\n          authorGroups[email].push(normalized);\n        }\n      }\n    } else {\n      datasetsWithoutContact.push(normalized);\n    }\n  }\n}\n\nconst mailJobs = [];\n\n// Sysadmin-Mail erstellen\nif (empfaenger === \"sysadmin\" || empfaenger === \"beide\") {\n  const adminHtml = wrapEmail(\n    \"Prüfliste: überfällige CKAN-Datensätze\",\n    `\n      ${emailBox(`\n        <p style=\"font-size: 18px; line-height: 1.5; margin: 0 0 12px 0;\">\n          Es wurden Datensätze gesucht, die <strong>${escapeHtml(pruefungText)}</strong> sind.\n        </p>\n\n        <h2 style=\"\n          color: #990000;\n          font-weight: 400;\n          font-size: 23px;\n          margin: 18px 0 10px 0;\n          border-bottom: 1px solid #d6d6d6;\n          padding-bottom: 4px;\n        \">\n          Zusammenfassung\n        </h2>\n\n        <ul style=\"margin: 10px 0 0 22px; padding: 0; line-height: 1.55;\">\n          <li><strong>Geprüfte Datensätze:</strong> ${normalizedDatasets.length}</li>\n          <li><strong>Von CKAN zurückgegeben:</strong> ${packages.length}</li>\n          <li><strong>Überfällige Datensätze:</strong> ${overdueDatasets.length}</li>\n          <li><strong>Datensätze ohne Datensatzkontakt:</strong> ${datasetsWithoutContact.length}</li>\n          <li><strong>Datensätze ohne gültiges Änderungsdatum:</strong> ${skippedWithoutModified.length}</li>\n        </ul>\n\n        ${notiz ? `\n          <p style=\"margin: 16px 0 0 0;\">\n            <strong>Hinweis:</strong> ${escapeHtml(notiz)}\n          </p>\n        ` : \"\"}\n      `)}\n\n      ${emailBox(`\n        <h2 style=\"\n          color: #990000;\n          font-weight: 400;\n          font-size: 23px;\n          margin: 0 0 10px 0;\n          border-bottom: 1px solid #d6d6d6;\n          padding-bottom: 4px;\n        \">\n          Überfällige Datensätze\n        </h2>\n\n        ${buildDatasetRows(overdueDatasets, true)}\n      `)}\n\n      ${emailBox(`\n        <h2 style=\"\n          color: #990000;\n          font-weight: 400;\n          font-size: 23px;\n          margin: 0 0 10px 0;\n          border-bottom: 1px solid #d6d6d6;\n          padding-bottom: 4px;\n        \">\n          Datensätze ohne Datensatzkontakt\n        </h2>\n\n        <p style=\"line-height: 1.5; margin: 0 0 12px 0;\">\n          Diese Datensätze haben weder <code>author_email</code> noch <code>maintainer_email</code>.\n        </p>\n\n        ${buildDatasetRows(datasetsWithoutContact, true)}\n      `)}\n    `\n  );\n\n  mailJobs.push({\n    type: \"admin\",\n    to: sysadminEmail,\n    originalTo: sysadminEmail,\n    subject: `Prüfliste: ${overdueDatasets.length} überfällige CKAN-Datensätze`,\n    html: adminHtml\n  });\n}\n\n// Datensatzkontakt-Mails erstellen: author_email + maintainer_email\nif (empfaenger === \"autoren\" || empfaenger === \"beide\") {\n  for (const [email, datasets] of Object.entries(authorGroups)) {\n    const authorHtml = wrapEmail(\n      \"Bitte CKAN-Datensätze prüfen\",\n      `\n        ${emailBox(`\n          <p style=\"font-size: 18px; line-height: 1.5; margin: 0 0 12px 0;\">\n            Hallo,\n          </p>\n\n          <p style=\"line-height: 1.5; margin: 0 0 12px 0;\">\n            folgende CKAN-Datensätze wurden seit längerer Zeit nicht aktualisiert.\n          </p>\n\n          <p style=\"line-height: 1.5; margin: 0;\">\n            <strong>Ausgewählte Prüfung:</strong> ${escapeHtml(pruefungText)}\n          </p>\n\n          ${notiz ? `\n            <p style=\"margin: 16px 0 0 0;\">\n              <strong>Hinweis:</strong> ${escapeHtml(notiz)}\n            </p>\n          ` : \"\"}\n        `)}\n\n        ${emailBox(`\n          <h2 style=\"\n            color: #990000;\n            font-weight: 400;\n            font-size: 23px;\n            margin: 0 0 10px 0;\n            border-bottom: 1px solid #d6d6d6;\n            padding-bottom: 4px;\n          \">\n            Zu prüfende Datensätze\n          </h2>\n\n          ${buildDatasetRows(datasets, false)}\n        `)}\n\n        ${emailBox(`\n          <p style=\"line-height: 1.5; margin: 0 0 12px 0;\">\n            Bitte prüfen Sie, ob die Inhalte noch aktuell sind oder ob eine Aktualisierung notwendig ist.\n          </p>\n\n          <p style=\"line-height: 1.5; margin: 0;\">\n            Vielen Dank.\n          </p>\n        `)}\n      `\n    );\n\n    mailJobs.push({\n      type: \"author\",\n      to: email,\n      originalTo: email,\n      subject: `Bitte CKAN-Datensätze prüfen: ${datasets.length} Datensatz/Datensätze`,\n      html: authorHtml\n    });\n  }\n}\n\n// Im Testmodus werden echte Empfänger nicht angeschrieben.\nif (modus === \"test\") {\n  for (const job of mailJobs) {\n    job.to = testEmail;\n    job.subject = `[TEST] ${job.subject}`;\n    job.html = wrapEmail(\n      \"Testversand\",\n      `\n        ${emailBox(`\n          <p style=\"line-height: 1.5; margin: 0;\">\n            <strong>TESTVERSAND</strong><br>\n            Diese E-Mail wäre normalerweise an <strong>${escapeHtml(job.originalTo)}</strong> gegangen.\n          </p>\n        `)}\n\n        ${job.html}\n      `\n    );\n  }\n}\n\nconst adminMailCount = mailJobs.filter(job => job.type === \"admin\").length;\nconst authorMailCount = mailJobs.filter(job => job.type === \"author\").length;\n\nconst previewHtml = `\n  <div>\n    <h2>Vorschau der Datensatzprüfung</h2>\n\n    <p>\n      Es wurden noch keine E-Mails versendet.\n    </p>\n\n    <p>\n      <strong>Ausgewählte Prüfung:</strong> ${escapeHtml(pruefungText)}<br>\n      <strong>Geprüfte Datensätze:</strong> ${escapeHtml(normalizedDatasets.length)}<br>\n      <strong>Von CKAN zurückgegeben:</strong> ${escapeHtml(packages.length)}<br>\n      <strong>Überfällige Datensätze:</strong> ${escapeHtml(overdueDatasets.length)}<br>\n      <strong>Datensätze ohne Datensatzkontakt:</strong> ${escapeHtml(datasetsWithoutContact.length)}<br>\n      <strong>Datensätze ohne gültiges Änderungsdatum:</strong> ${escapeHtml(skippedWithoutModified.length)}<br>\n      <strong>Vorbereitete E-Mails:</strong> ${escapeHtml(mailJobs.length)}<br>\n      <strong>Sysadmin-Mails:</strong> ${escapeHtml(adminMailCount)}<br>\n      <strong>Datensatzkontakt-Mails:</strong> ${escapeHtml(authorMailCount)}\n    </p>\n\n    <p>\n      Datensatzkontakte sind hier <code>author_email</code> und <code>maintainer_email</code>.\n      CKAN-Editoren, Organisations-Admins und Members werden nicht angeschrieben.\n    </p>\n  </div>\n`;\n\nconst finalNoMailHtml = `\n  <h2>Prüfung abgeschlossen</h2>\n\n  <p>Es wurden keine E-Mails versendet.</p>\n\n  <p>\n    Ausgewählte Prüfung: <strong>${escapeHtml(pruefungText)}</strong><br>\n    Geprüfte Datensätze: <strong>${escapeHtml(normalizedDatasets.length)}</strong><br>\n    Überfällige Datensätze: <strong>${escapeHtml(overdueDatasets.length)}</strong><br>\n    Vorbereitete E-Mails: <strong>${escapeHtml(mailJobs.length)}</strong>\n  </p>\n`;\n\nreturn [\n  {\n    json: {\n      modus,\n      empfaenger,\n      pruefungText,\n      checkedCount: normalizedDatasets.length,\n      ckanReturnedCount: packages.length,\n      skippedWithoutModifiedCount: skippedWithoutModified.length,\n      overdueCount: overdueDatasets.length,\n      withoutContactCount: datasetsWithoutContact.length,\n      authorGroupCount: Object.keys(authorGroups).length,\n      mailJobCount: mailJobs.length,\n      adminMailCount,\n      authorMailCount,\n      overdueDatasets,\n      datasetsWithoutContact,\n      mailJobs,\n      previewHtml,\n      finalNoMailHtml,\n      startart\n    }\n  }\n];"
+      },
+      "name": "Überfällige Datensätze und Mail-Aufträge erstellen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.modus }}",
+              "rightValue": "vorschau",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Vorschau oder Versand?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Was soll nach der Vorschau passieren?",
+              "fieldType": "dropdown",
+              "fieldName": "vorschau_entscheidung",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Nur Vorschau schließen"
+                  },
+                  {
+                    "option": "Testversand an TEST_EMAIL"
+                  },
+                  {
+                    "option": "E-Mails wirklich senden"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "limitWaitTime": "={{ false }}",
+        "options": {
+          "formTitle": "Vorschau der Datensatzprüfung",
+          "formDescription": "={{ $json.previewHtml }}",
+          "buttonLabel": "Weiter",
+          "customCss": ":root {\n  --font-family: Georgia, \"Times New Roman\", serif;\n  --font-weight-normal: 400;\n  --font-weight-bold: 700;\n\n  --font-size-body: 18px;\n  --font-size-label: 16px;\n  --font-size-header: 22px;\n  --font-size-paragraph: 18px;\n\n  --font-size-html-h1: 34px;\n  --font-size-html-h2: 28px;\n  --font-size-html-h3: 22px;\n  --font-size-html-h4: 18px;\n\n  --color-primary: #990000;\n  --color-primary-shade-1: #7f0000;\n  --color-primary-shade-2: #660000;\n}\n\nbody {\n  background: #f2f2f2 !important;\n  color: #222 !important;\n}\n\nmain,\nsection,\n.form-container {\n  background: #f2f2f2 !important;\n  max-width: 1180px !important;\n  width: 100% !important;\n}\n\nform {\n  background: #f6f6f6 !important;\n  border: 1px solid #b7b7b7 !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n  width: min(980px, calc(100vw - 40px)) !important;\n  max-width: 980px !important;\n  margin: 28px auto !important;\n  padding: 30px 36px !important;\n  text-align: left !important;\n}\n\nh1 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin-bottom: 22px !important;\n  border-bottom: 1px solid #c8c8c8;\n  padding-bottom: 12px;\n}\n\nh2 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 0 0 18px 0 !important;\n}\n\nh3 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 18px 0 10px 0 !important;\n  border-bottom: 1px solid #d6d6d6;\n  padding-bottom: 4px;\n}\n\np,\nli,\ndiv,\nspan {\n  color: #222 !important;\n  text-align: left !important;\n  line-height: 1.5 !important;\n}\n\nul {\n  margin: 10px 0 18px 22px !important;\n  padding: 0 !important;\n}\n\nli {\n  margin: 6px 0 !important;\n}\n\na {\n  color: #990000 !important;\n  text-decoration: underline !important;\n  font-weight: 400 !important;\n}\n\ncode {\n  background: #ececec !important;\n  border: 1px solid #d2d2d2 !important;\n  border-radius: 4px !important;\n  padding: 1px 5px !important;\n  font-size: 0.95em !important;\n}\n\nbutton {\n  background: linear-gradient(#bb0000, #8f0000) !important;\n  color: #fff !important;\n  border: 1px solid #6f0000 !important;\n  border-radius: 6px !important;\n  font-weight: 700 !important;\n  box-shadow: none !important;\n}\n\nbutton:hover {\n  background: linear-gradient(#a40000, #7f0000) !important;\n}\n\n.report-page {\n  text-align: left !important;\n}\n\n.report-box {\n  background: #fdfdfd;\n  border: 1px solid #c8c8c8;\n  border-radius: 8px;\n  padding: 18px 20px;\n  margin: 0 0 18px 0;\n}\n\n.note-box {\n  background: #f3f3f3;\n}\n\n.lead {\n  font-size: 1.08em;\n  margin-bottom: 14px;\n}"
+        }
+      },
+      "name": "Vorschau anzeigen",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1312,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mailJobCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Gibt es Mail-Aufträge?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Prüfung abgeschlossen",
+        "completionMessage": "={{ $json.finalNoMailHtml }}",
+        "options": {
+          "customCss": ":root {\n  --font-family: Georgia, \"Times New Roman\", serif;\n  --font-weight-normal: 400;\n  --font-weight-bold: 700;\n\n  --font-size-body: 18px;\n  --font-size-label: 16px;\n  --font-size-header: 22px;\n  --font-size-paragraph: 18px;\n\n  --font-size-html-h1: 34px;\n  --font-size-html-h2: 28px;\n  --font-size-html-h3: 22px;\n  --font-size-html-h4: 18px;\n\n  --color-primary: #990000;\n  --color-primary-shade-1: #7f0000;\n  --color-primary-shade-2: #660000;\n}\n\nbody {\n  background: #f2f2f2 !important;\n  color: #222 !important;\n}\n\nmain,\nsection,\n.form-container {\n  background: #f2f2f2 !important;\n  max-width: 1180px !important;\n  width: 100% !important;\n}\n\nform {\n  background: #f6f6f6 !important;\n  border: 1px solid #b7b7b7 !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n  width: min(980px, calc(100vw - 40px)) !important;\n  max-width: 980px !important;\n  margin: 28px auto !important;\n  padding: 30px 36px !important;\n  text-align: left !important;\n}\n\nh1 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin-bottom: 22px !important;\n  border-bottom: 1px solid #c8c8c8;\n  padding-bottom: 12px;\n}\n\nh2 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 0 0 18px 0 !important;\n}\n\nh3 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 18px 0 10px 0 !important;\n  border-bottom: 1px solid #d6d6d6;\n  padding-bottom: 4px;\n}\n\np,\nli,\ndiv,\nspan {\n  color: #222 !important;\n  text-align: left !important;\n  line-height: 1.5 !important;\n}\n\nul {\n  margin: 10px 0 18px 22px !important;\n  padding: 0 !important;\n}\n\nli {\n  margin: 6px 0 !important;\n}\n\na {\n  color: #990000 !important;\n  text-decoration: underline !important;\n  font-weight: 400 !important;\n}\n\ncode {\n  background: #ececec !important;\n  border: 1px solid #d2d2d2 !important;\n  border-radius: 4px !important;\n  padding: 1px 5px !important;\n  font-size: 0.95em !important;\n}\n\nbutton {\n  background: linear-gradient(#bb0000, #8f0000) !important;\n  color: #fff !important;\n  border: 1px solid #6f0000 !important;\n  border-radius: 6px !important;\n  font-weight: 700 !important;\n  box-shadow: none !important;\n}\n\nbutton:hover {\n  background: linear-gradient(#a40000, #7f0000) !important;\n}\n\n.report-page {\n  text-align: left !important;\n}\n\n.report-box {\n  background: #fdfdfd;\n  border: 1px solid #c8c8c8;\n  border-radius: 8px;\n  padding: 18px 20px;\n  margin: 0 0 18px 0;\n}\n\n.note-box {\n  background: #f3f3f3;\n}\n\n.lead {\n  font-size: 1.08em;\n  margin-bottom: 14px;\n}"
+        }
+      },
+      "name": "Keine Mails nötig",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1536,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "mailJobs",
+        "options": {}
+      },
+      "name": "Mail-Aufträge aufteilen",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "name": "E-Mail senden",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $(\"Überfällige Datensätze und Mail-Aufträge erstellen\").first().json;\n\nconst sentItems = $input.all();\nconst sentCount = sentItems.length;\n\nconst modusText = summary.modus === \"test\"\n  ? \"Testversand an TEST_EMAIL\"\n  : \"E-Mails wirklich senden\";\n\nconst datensatzKontaktMailCount = summary.authorMailCount || 0;\n\nconst html = `\n  <h2>Prüfung abgeschlossen</h2>\n\n  <p>Ausführung: <strong>${modusText}</strong></p>\n\n  <p>\n    Ausgewählte Prüfung: <strong>${summary.pruefungText}</strong><br>\n    Geprüfte Datensätze: <strong>${summary.checkedCount}</strong><br>\n    Von CKAN zurückgegeben: <strong>${summary.ckanReturnedCount}</strong><br>\n    Überfällige Datensätze: <strong>${summary.overdueCount}</strong><br>\n    Datensätze ohne Datensatzkontakt: <strong>${summary.withoutContactCount}</strong><br>\n    Datensätze ohne gültiges Änderungsdatum: <strong>${summary.skippedWithoutModifiedCount}</strong>\n  </p>\n\n  <p>\n    Vorbereitete E-Mails: <strong>${summary.mailJobCount}</strong><br>\n    Versendete E-Mails: <strong>${sentCount}</strong><br>\n    Sysadmin-Mails: <strong>${summary.adminMailCount}</strong><br>\n    Datensatzkontakt-Mails: <strong>${datensatzKontaktMailCount}</strong>\n  </p>\n\n  <p>\n    Hinweis: Datensatzkontakte sind hier <code>author_email</code> und <code>maintainer_email</code>.\n    CKAN-Editoren, Organisations-Admins und Members werden nicht angeschrieben.\n  </p>\n`;\n\nreturn [\n  {\n    json: {\n      finalHtml: html,\n      sentCount\n    }\n  }\n];"
+      },
+      "name": "Versandabschluss erstellen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Prüfung abgeschlossen",
+        "completionMessage": "={{ $json.finalHtml || $json.finalNoMailHtml || \"Prüfung abgeschlossen.\" }}",
+        "options": {
+          "customCss": ":root {\n  --font-family: Georgia, \"Times New Roman\", serif;\n  --font-weight-normal: 400;\n  --font-weight-bold: 700;\n\n  --font-size-body: 18px;\n  --font-size-label: 16px;\n  --font-size-header: 22px;\n  --font-size-paragraph: 18px;\n\n  --font-size-html-h1: 34px;\n  --font-size-html-h2: 28px;\n  --font-size-html-h3: 22px;\n  --font-size-html-h4: 18px;\n\n  --color-primary: #990000;\n  --color-primary-shade-1: #7f0000;\n  --color-primary-shade-2: #660000;\n}\n\nbody {\n  background: #f2f2f2 !important;\n  color: #222 !important;\n}\n\nmain,\nsection,\n.form-container {\n  background: #f2f2f2 !important;\n  max-width: 1180px !important;\n  width: 100% !important;\n}\n\nform {\n  background: #f6f6f6 !important;\n  border: 1px solid #b7b7b7 !important;\n  border-radius: 10px !important;\n  box-shadow: none !important;\n  width: min(980px, calc(100vw - 40px)) !important;\n  max-width: 980px !important;\n  margin: 28px auto !important;\n  padding: 30px 36px !important;\n  text-align: left !important;\n}\n\nh1 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin-bottom: 22px !important;\n  border-bottom: 1px solid #c8c8c8;\n  padding-bottom: 12px;\n}\n\nh2 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 0 0 18px 0 !important;\n}\n\nh3 {\n  color: #990000 !important;\n  font-weight: 400 !important;\n  text-align: left !important;\n  margin: 18px 0 10px 0 !important;\n  border-bottom: 1px solid #d6d6d6;\n  padding-bottom: 4px;\n}\n\np,\nli,\ndiv,\nspan {\n  color: #222 !important;\n  text-align: left !important;\n  line-height: 1.5 !important;\n}\n\nul {\n  margin: 10px 0 18px 22px !important;\n  padding: 0 !important;\n}\n\nli {\n  margin: 6px 0 !important;\n}\n\na {\n  color: #990000 !important;\n  text-decoration: underline !important;\n  font-weight: 400 !important;\n}\n\ncode {\n  background: #ececec !important;\n  border: 1px solid #d2d2d2 !important;\n  border-radius: 4px !important;\n  padding: 1px 5px !important;\n  font-size: 0.95em !important;\n}\n\nbutton {\n  background: linear-gradient(#bb0000, #8f0000) !important;\n  color: #fff !important;\n  border: 1px solid #6f0000 !important;\n  border-radius: 6px !important;\n  font-weight: 700 !important;\n  box-shadow: none !important;\n}\n\nbutton:hover {\n  background: linear-gradient(#a40000, #7f0000) !important;\n}\n\n.report-page {\n  text-align: left !important;\n}\n\n.report-box {\n  background: #fdfdfd;\n  border: 1px solid #c8c8c8;\n  border-radius: 8px;\n  padding: 18px 20px;\n  margin: 0 0 18px 0;\n}\n\n.note-box {\n  background: #f3f3f3;\n}\n\n.lead {\n  font-size: 1.08em;\n  margin-bottom: 14px;\n}"
+        }
+      },
+      "name": "Abschluss anzeigen",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2432,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "ckanUrl": "={{$env.CKAN_SITE_URL}}",
+        "q": "=*:*",
+        "rows": 1000
+      },
+      "type": "n8n-nodes-ckan.ckan",
+      "typeVersion": 1,
+      "position": [
+        416,
+        544
+      ],
+      "name": "CKAN"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sysadminEmail = $env.SYSADMIN_EMAIL || \"\";\nconst testEmail = $env.TEST_EMAIL || \"\";\nconst emailFrom = $env.EMAIL_FROM || \"\";\nreturn $input.all();\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        544
+      ],
+      "name": "Konfiguration"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        448
+      ],
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      startart: \"zeittrigger\",\n      pruefung_auswahl: \"6 Monate\",\n      empfaenger_auswahl: \"Sysadmin und Datensatzkontakte\",\n      ausfuehrung: \"Testversand an TEST_EMAIL\",\n      notiz: \"Automatische turnusmäßige Datensatzprüfung.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        448
+      ],
+      "name": "Zeittrigger-Formularwerte setzen"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Formularwerte und Prüfparameter vorbereiten').item.json.startart }}",
+              "rightValue": "formular",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1952,
+        560
+      ],
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "# Part 3: E-Mail formation\n\n\n",
+        "height": 688,
+        "width": 1840
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        816,
+        304
+      ],
+      "typeVersion": 1,
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Part 2: CKAN Abfrage",
+        "height": 688,
+        "width": 432
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        352,
+        304
+      ],
+      "typeVersion": 1,
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Part 1: Zeitraum Konfiguration",
+        "height": 688,
+        "width": 896
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        304
+      ],
+      "typeVersion": 1,
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formular: Datensatzprüfung starten": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formularwerte und Prüfparameter vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "CKAN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CKAN-Antwort prüfen und extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Überfällige Datensätze und Mail-Aufträge erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Überfällige Datensätze und Mail-Aufträge erstellen": {
+      "main": [
+        [
+          {
+            "node": "Vorschau oder Versand?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorschau oder Versand?": {
+      "main": [
+        [
+          {
+            "node": "Vorschau anzeigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gibt es Mail-Aufträge?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gibt es Mail-Aufträge?": {
+      "main": [
+        [
+          {
+            "node": "Mail-Aufträge aufteilen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Mails nötig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail-Aufträge aufteilen": {
+      "main": [
+        [
+          {
+            "node": "E-Mail senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-Mail senden": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versandabschluss erstellen": {
+      "main": [
+        [
+          {
+            "node": "Abschluss anzeigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CKAN": {
+      "main": [
+        [
+          {
+            "node": "CKAN-Antwort prüfen und extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Formularwerte und Prüfparameter vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Zeittrigger-Formularwerte setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zeittrigger-Formularwerte setzen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Versandabschluss erstellen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": [
+    {
+      "name": "CKAN"
+    }
+  ]
+}
